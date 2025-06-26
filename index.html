@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Checklist de Aprovações</title>
+<style>
+* {box-sizing: border-box; font-family: Arial;}
+body {background: #f8fafc; display: flex; justify-content: center; padding: 20px;}
+.container {background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 800px;}
+.header {background: #4361ee; color: white; padding: 15px; border-radius: 10px 10px 0 0;}
+.content {padding: 15px;}
+input {width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px;}
+.item {display: flex; padding: 10px; border-bottom: 1px solid #eee; align-items: center;}
+.item-text {flex: 1;}
+.status {padding: 5px 10px; border-radius: 15px; font-size: 12px; margin: 0 10px;}
+.pendente {background: #fef3c7; color: #92400e;}
+.ok {background: #d1fae5; color: #065f46;}
+.nao {background: #fee2e2; color: #991b1b;}
+button {background: none; border: none; cursor: pointer; color: #4361ee;}
+.btn-add {background: #4361ee; color: white; padding: 8px 15px; border-radius: 5px;}
+.footer {padding: 15px; border-top: 1px solid #eee; display: flex; justify-content: space-between;}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h2>Checklist de Aprovações</h2>
+    <p>Gerencie seus itens de aprovação</p>
+  </div>
+  
+  <div class="content">
+    <div>
+      <input type="text" id="novoItem" placeholder="Adicionar novo item...">
+      <button class="btn-add" onclick="adicionarItem()">Adicionar</button>
+    </div>
+    
+    <div id="listaItens">
+      <!-- Itens serão adicionados aqui -->
+    </div>
+  </div>
+  
+  <div class="footer">
+    <div>Total: <span id="contador">0</span> itens</div>
+    <button class="btn-add" onclick="exportar()">Exportar</button>
+  </div>
+</div>
+
+<script>
+// Identificador único para este checklist
+const checklistId = 'checklist-aprovacoes';
+
+// Carregar itens salvos
+let itens = JSON.parse(localStorage.getItem(checklistId)) || [];
+
+// Renderizar itens iniciais
+renderizarItens();
+
+// Adicionar novo item
+function adicionarItem() {
+  const texto = document.getElementById('novoItem').value.trim();
+  if (texto) {
+    itens.push({
+      id: Date.now(),
+      texto: texto,
+      status: 'pendente'
+    });
+    salvarItens();
+    renderizarItens();
+    document.getElementById('novoItem').value = '';
+  }
+}
+
+// Renderizar todos os itens
+function renderizarItens() {
+  const listaEl = document.getElementById('listaItens');
+  listaEl.innerHTML = '';
+  
+  if (itens.length === 0) {
+    listaEl.innerHTML = '<p style="text-align:center;padding:20px;">Nenhum item adicionado</p>';
+  } else {
+    itens.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = 'item';
+      
+      let statusClass = item.status;
+      let statusText = item.status === 'ok' ? 'OK' : (item.status === 'nao' ? 'Não' : 'Pendente');
+      
+      div.innerHTML = `
+        <span class="item-text">${index + 1}. ${item.texto}</span>
+        <span class="status ${statusClass}">${statusText}</span>
+        <button onclick="alternarStatus(${item.id})">Status</button>
+        <button onclick="excluirItem(${item.id})">Excluir</button>
+      `;
+      
+      listaEl.appendChild(div);
+    });
+  }
+  
+  document.getElementById('contador').textContent = itens.length;
+}
+
+// Alternar status do item
+function alternarStatus(id) {
+  const item = itens.find(item => item.id === id);
+  
+  if (item) {
+    // Ciclo: pendente -> ok -> nao -> pendente
+    if (item.status === 'pendente') item.status = 'ok';
+    else if (item.status === 'ok') item.status = 'nao';
+    else item.status = 'pendente';
+    
+    salvarItens();
+    renderizarItens();
+  }
+}
+
+// Excluir item
+function excluirItem(id) {
+  itens = itens.filter(item => item.id !== id);
+  salvarItens();
+  renderizarItens();
+}
+
+// Salvar itens
+function salvarItens() {
+  localStorage.setItem(checklistId, JSON.stringify(itens));
+}
+
+// Exportar checklist
+function exportar() {
+  if (itens.length === 0) {
+    alert('Não há itens para exportar.');
+    return;
+  }
+  
+  let conteudo = "CHECKLIST DE APROVAÇÕES\n\n";
+  
+  itens.forEach((item, index) => {
+    let status = item.status === 'ok' ? '✅ OK' : (item.status === 'nao' ? '❌ NÃO' : '⏳ PENDENTE');
+    conteudo += `${index + 1}. ${item.texto} - ${status}\n`;
+  });
+  
+  const blob = new Blob([conteudo], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'checklist_aprovacoes.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Permitir adicionar item com Enter
+document.getElementById('novoItem').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') adicionarItem();
+});
+</script>
+</body>
+</html>
